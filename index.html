@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Julia 💖</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#1e293b;
+  --accent:#f43f5e;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  height:100vh;
+  background:radial-gradient(circle at top,#1e293b,var(--bg));
+  font-family:'Fredoka',sans-serif;
+  color:white;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.app{
+  width:100%;
+  max-width:420px;
+  height:90vh;
+  background:var(--card);
+  border-radius:30px;
+  padding:18px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.media{
+  height:230px;
+  border-radius:24px;
+  overflow:hidden;
+  background:black;
+}
+.media img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+h1{
+  text-align:center;
+  font-size:22px;
+  min-height:64px;
+  background:linear-gradient(90deg,#ff7eb3,#ff758c);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.buttons{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+button{
+  padding:16px;
+  font-size:18px;
+  border:none;
+  border-radius:22px;
+  font-family:inherit;
+  font-weight:600;
+}
+#yes{
+  background:linear-gradient(45deg,#f43f5e,#fb7185);
+  color:white;
+  opacity:.4;
+}
+#no{
+  background:#334155;
+  color:#cbd5f5;
+}
+#snake{
+  display:none;
+  text-align:center;
+}
+canvas{
+  background:#020617;
+  border-radius:16px;
+}
+.arrows{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:10px;
+}
+.key{
+  background:#334155;
+  padding:14px;
+  border-radius:16px;
+}
+.final{
+  text-align:center;
+  font-size:48px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app" id="app">
+  <div>
+    <div class="media">
+      <img id="gif" src="https://media.giphy.com/media/c76IJLufpNwSULPk2m/giphy.gif">
+    </div>
+    <h1 id="text">Julia, willst du mein Valentin sein? ❤️</h1>
+
+    <div id="snake">
+      <p>Äpfel: <span id="score">0</span>/3</p>
+      <canvas id="canvas" width="220" height="220"></canvas>
+      <div class="arrows">
+        <div></div><button class="key" onclick="dir(0,-1)">⬆️</button><div></div>
+        <button class="key" onclick="dir(-1,0)">⬅️</button>
+        <button class="key" onclick="dir(0,1)">⬇️</button>
+        <button class="key" onclick="dir(1,0)">➡️</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="buttons" id="buttons">
+    <button id="yes">JA 😍</button>
+    <button id="no">NEIN 😈</button>
+  </div>
+</div>
+
+<script>
+const scenes=[
+ {t:"Ich hab gesehen, dass du auf NEIN wolltest 👀",g:"https://media.giphy.com/media/vO8F4fYK3BM7m/giphy.gif"},
+ {t:"Herzscan läuft… 💓",g:"https://media.giphy.com/media/TPl5N4CiF99jc63BS0/giphy.gif"},
+ {t:"Ergebnis: 100 % süß 😌",g:"https://media.giphy.com/media/l3q2K5jinAlChoCLS/giphy.gif"},
+ {t:"Beweis es im Snake. 3 Äpfel 🍎",s:1},
+ {t:"Okay… du machst das echt gut 😏",g:"https://media.giphy.com/media/qUIm5wu6LAAog/giphy.gif"},
+ {t:"Letzte Chance, Julia…",g:"https://media.giphy.com/media/qUIm5wu6LAAog/giphy.gif"},
+];
+
+let i=0,noClicks=0;
+const gif=document.getElementById("gif");
+const text=document.getElementById("text");
+const yes=document.getElementById("yes");
+const no=document.getElementById("no");
+const snake=document.getElementById("snake");
+const buttons=document.getElementById("buttons");
+
+no.onclick=()=>{
+  noClicks++;
+  no.style.position="fixed";
+  no.style.left=Math.random()*70+"%";
+  no.style.top=Math.random()*70+"%";
+  if(noClicks>=3){
+    yes.style.opacity=1;
+  }
+};
+
+yes.onclick=()=>{
+  no.style.display="none";
+  next();
+};
+
+function next(){
+  if(i>=scenes.length) return finale();
+  const s=scenes[i];
+  text.innerHTML=s.t;
+  if(s.g) gif.src=s.g;
+  if(s.s){
+    buttons.style.display="none";
+    snake.style.display="block";
+    startSnake();
+    return;
+  }
+  i++;
+}
+
+function finale(){
+  document.getElementById("app").innerHTML=`
+    <img src="https://media.giphy.com/media/KztT2c4u8mYYUiMKdJ/giphy.gif" style="width:100%;border-radius:24px">
+    <h1 style="background:none;color:#ff7eb3">GEWONNEN ❤️</h1>
+    <p style="text-align:center">Ich freu mich riesig auf Samstag mit dir!</p>
+    <div class="final">🥂🍕✨</div>
+  `;
+}
+
+/* Snake */
+const c=document.getElementById("canvas");
+const ctx=c.getContext("2d");
+let snakeArr,apple,d,score,loop;
+
+function startSnake(){
+  snakeArr=[{x:10,y:10}];
+  apple={x:5,y:5};
+  d={x:1,y:0};
+  score=0;
+  document.getElementById("score").innerText=0;
+
+  loop=setInterval(()=>{
+    const h={x:snakeArr[0].x+d.x,y:snakeArr[0].y+d.y};
+    if(h.x<0||h.x>21||h.y<0||h.y>21)return;
+    snakeArr.unshift(h);
+    if(h.x===apple.x&&h.y===apple.y){
+      score++;
+      document.getElementById("score").innerText=score;
+      apple={x:Math.floor(Math.random()*22),y:Math.floor(Math.random()*22)};
+      if(score>=3){
+        clearInterval(loop);
+        snake.style.display="none";
+        buttons.style.display="flex";
+        i++;next();
+      }
+    }else snakeArr.pop();
+
+    ctx.clearRect(0,0,220,220);
+    ctx.fillStyle="#f43f5e";
+    ctx.fillRect(apple.x*10,apple.y*10,8,8);
+    ctx.fillStyle="#22d3ee";
+    snakeArr.forEach(p=>ctx.fillRect(p.x*10,p.y*10,8,8));
+  },140);
+}
+
+function dir(x,y){
+  if(d.x!==-x||d.y!==-y) d={x,y};
+}
+</script>
+
+</body>
+</html>
